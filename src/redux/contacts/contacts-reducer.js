@@ -1,17 +1,42 @@
-import { combineReducers } from 'redux';
 import { createReducer } from '@reduxjs/toolkit';
-import actions from './contacts-actions';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { changeFilter } from './contacts-actions';
 
-const items = createReducer([], {
-  [actions.addContact]: (state, { payload }) => [...state, payload],
-  [actions.deleteContacts]: (state, { payload }) =>
-    state.filter(({ id }) => id !== payload),
-});
-const filter = createReducer('', {
-  [actions.changeFilter]: (_, { payload }) => payload,
+export const filterReducer = createReducer('', {
+  [changeFilter]: (_, { payload }) => payload,
 });
 
-export default combineReducers({
-  items,
-  filter,
+export const contactsApi = createApi({
+  reducerPath: 'contacts',
+  baseQuery: fetchBaseQuery({
+    baseUrl: 'https://61f3c85210f0f7001768c62e.mockapi.io',
+  }),
+  tagTypes: ['Contact'],
+  endpoints: builder => ({
+    fetchContacts: builder.query({
+      query: () => '/contacts',
+      providesTags: ['Contact'],
+    }),
+    deleteContacts: builder.mutation({
+      query: contactId => ({
+        url: `/contacts/${contactId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Contact'],
+    }),
+    addContact: builder.mutation({
+      query: newContact => ({
+        url: '/contacts',
+        method: 'POST',
+        body: newContact,
+      }),
+      invalidatesTags: ['Contact'],
+    }),
+  }),
 });
+
+export const {
+  useFetchContactsQuery,
+  useDeleteContactsMutation,
+  useAddContactMutation,
+} = contactsApi;

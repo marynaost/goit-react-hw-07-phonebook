@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import actions from '../../redux/contacts/contacts-actions';
+import {
+  useAddContactMutation,
+  useFetchContactsQuery,
+} from 'redux/contacts/contacts-reducer';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import shortid from 'shortid';
-import { getContacts } from '../../redux/contacts/contacts-selectors';
 import s from './ContactForm.module.scss';
 
 export default function ContactForm() {
   const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
-  const contacts = useSelector(getContacts);
-  const dispatch = useDispatch();
+  const [phone, setPhone] = useState('');
+  const { data: contacts } = useFetchContactsQuery();
+  const [addContact, { isLoading }] = useAddContactMutation();
 
   const nameInputId = shortid.generate();
-  const numberInputId = shortid.generate();
+  const phoneInputId = shortid.generate();
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -20,8 +23,8 @@ export default function ContactForm() {
       case 'name':
         setName(value);
         break;
-      case 'number':
-        setNumber(value);
+      case 'phone':
+        setPhone(value);
         break;
       default:
         return;
@@ -30,26 +33,30 @@ export default function ContactForm() {
 
   const handleSubmit = e => {
     e.preventDefault();
-    handleAddToContacts();
+
+    const sameContactName = contacts.find(
+      contact => name.toLowerCase() === contact.name.toLowerCase(),
+    );
+
+    const sameContactPhone = contacts.find(contact => phone === contact.phone);
+
+    if (sameContactName && sameContactPhone) {
+      toast.warning(`${name} is already in contacts `);
+      toast.warning(`${phone} is already in contacts `);
+    } else if (sameContactName) {
+      toast.warning(`${name} is already in contacts `);
+    } else if (sameContactPhone) {
+      toast.warning(`${phone} is already in contacts `);
+    } else {
+      addContact({ name, phone });
+    }
+
     reset();
-  };
-
-  const handleAddToContacts = () => {
-    const newContacts = {
-      name,
-      number,
-    };
-
-    contacts.find(
-      contact => newContacts.name.toLowerCase() === contact.name.toLowerCase(),
-    )
-      ? alert(`${newContacts.name} is already in contacts`)
-      : dispatch(actions.addContact(newContacts));
   };
 
   const reset = () => {
     setName('');
-    setNumber('');
+    setPhone('');
   };
 
   return (
@@ -68,22 +75,22 @@ export default function ContactForm() {
           id={nameInputId}
         />
       </label>
-      <label className={s.label} htmlFor={numberInputId}>
+      <label className={s.label} htmlFor={phoneInputId}>
         Number
         <input
           className={s.input}
           type="tel"
-          name="number"
-          value={number}
+          name="phone"
+          value={phone}
           pattern="\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}"
           title="Phone number must be digits and can contain spaces, dashes, parentheses and can start with +"
           required
           onChange={handleChange}
-          id={numberInputId}
+          id={phoneInputId}
         />
       </label>
-      <button className={s.button} type="submit">
-        Add contact
+      <button className={s.button} type="submit" disabled={isLoading}>
+        {isLoading ? 'Adding contact' : 'Add contact'}
       </button>
     </form>
   );
